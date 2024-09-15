@@ -4,13 +4,16 @@ import AddBtn from "./AddBtn";
 import Category from "./Category";
 import todo_icon from "../assets/todo_icon.png";
 import EditModal from "./EditModal";
-import Swal from "sweetalert2";
-import 'sweetalert2/dist/sweetalert2.min.css';
+import useDeleteConfirmer from "../hooks/useDeleteConfirmer";
+import { getTodosFromLocalstorage } from "../helpers/localstorage-manager";
+
 
 const Todo = () => {
+  
+  const {isAddModalOpen, openAddModal, closeAddModal} = useAddModal();
+  const {confirmDelete} =useDeleteConfirmer();
   const [todoList, setTodoList] = useState([]);
   const [filter, setFilter] = useState("All");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState(null); // Track the task to edit
   // Store the task details
@@ -18,22 +21,18 @@ const Todo = () => {
 
   // Load todoList from localStorage on page load
   useEffect(() => {
-    const storedTodos = localStorage.getItem("todoList");
-    if (storedTodos) {
-      setTodoList(JSON.parse(storedTodos)); // Set the retrieved list into state
-    }
+    const todos = getTodosFromLocalstorage()
+    setTodoList(todos);
   }, []);
 
   // Save todoList to localStorage whenever it changes
   useEffect(() => {
-    if (todoList.length > 0) {
-      localStorage.setItem("todoList", JSON.stringify(todoList));
-    }
+    saveTodosIntoLocalStorage(todoList);
   }, [todoList]);
 
   const newTodo = (newTodo) => {
     setTodoList((prevTodoList) => [newTodo, ...prevTodoList]);
-    setIsAddModalOpen(false); // Close the modal after adding the task
+    closeAddModal();
   };
 
   const editTodo = (index) => {
@@ -51,22 +50,13 @@ const Todo = () => {
 
   // Confirm before deleting todo and save changes to localStorage
   const deleteTodo = (index) => {
-    Swal.fire({
-      title: "Are you sure?",
-      text: "Do you really want to delete this task?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "No, cancel!",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const updatedTodos = [...todoList];
-        updatedTodos.splice(index, 1); // Remove the task at the selected index
-        setTodoList(updatedTodos); // Update state with the new list
-        localStorage.setItem("todoList", JSON.stringify(updatedTodos)); // Save the updated list to localStorage
-        Swal.fire("Deleted!", "Your task has been deleted.", "success");
-      }
-    });
+
+    confirmDelete(()=>{
+      const updatedTodos = [...todoList];
+      updatedTodos.splice(index, 1); // Remove the task at the selected index
+      setTodoList(updatedTodos); // Update state with the new list
+      localStorage.setItem("todoList", JSON.stringify(updatedTodos)); // Save the updated list to localStorage
+    })
   };
 
   const onCheckChangedCb = (index) => {
@@ -118,7 +108,7 @@ const Todo = () => {
           <div className="bg-white p-6 rounded-lg w-[400px] relative">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-              onClick={() => setIsAddModalOpen(false)}
+              onClick={closeAddModal}
             >
               ✕
             </button>
